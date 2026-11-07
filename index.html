@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Groceries">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Groceries</title>
+<style>
+  :root{ --bg:#f2f2f7; --card:#fff; --text:#1c1c1e; --sub:#8e8e93; --sep:#e5e5ea; --accent:#34a853; }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#000; --card:#1c1c1e; --text:#f2f2f7; --sub:#8e8e93; --sep:#38383a; --accent:#30d158; }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:560px;margin:0 auto;
+    padding:calc(env(safe-area-inset-top) + 16px) calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 120px) calc(env(safe-area-inset-left) + 16px);}
+  header{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 4px 14px}
+  h1{font-size:34px;font-weight:700;letter-spacing:-.5px;margin:0}
+  .count{color:var(--sub);font-size:15px;margin-bottom:6px}
+
+  .add{background:var(--card);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+  .add-row{display:flex;gap:8px}
+  .add input{flex:1;min-width:0;border:none;background:var(--bg);color:var(--text);border-radius:10px;padding:12px;font-size:17px;outline:none}
+  .add-row button{border:none;background:var(--accent);color:#fff;font-size:17px;font-weight:600;border-radius:10px;padding:0 18px;cursor:pointer}
+  .add-row button:disabled{opacity:.4}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:none;background:var(--bg);color:var(--text);font-size:14px;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .chip.on{background:var(--accent);color:#fff}
+
+  .section{margin-bottom:20px}
+  .section h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--sub);margin:0 16px 6px;display:flex;gap:6px}
+  .list{background:var(--card);border-radius:14px;overflow:hidden}
+  .item{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:50px;border-top:.5px solid var(--sep);
+    transition:opacity .35s, transform .35s, max-height .35s .2s, padding .35s .2s;max-height:80px}
+  .item:first-child{border-top:none}
+  .check{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--sub);background:none;cursor:pointer;display:grid;place-items:center;padding:0}
+  .check svg{opacity:0;width:14px;height:14px}
+  .item.done .check{background:var(--accent);border-color:var(--accent)}
+  .item.done .check svg{opacity:1}
+  .item.done .name{text-decoration:line-through;color:var(--sub)}
+  .item.leaving{opacity:0;transform:translateX(30px);max-height:0;padding-top:0;padding-bottom:0}
+  .name{flex:1;font-size:17px;word-break:break-word;cursor:pointer}
+  .del{border:none;background:none;color:var(--sub);font-size:20px;cursor:pointer;padding:4px 6px;line-height:1}
+
+  .empty{text-align:center;color:var(--sub);padding:60px 20px;font-size:16px}
+  .empty div{font-size:44px;margin-bottom:8px}
+  .hint{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:18px;font-size:14px;color:var(--sub);line-height:1.4}
+  .hint b{color:var(--text)}
+
+  .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);transform:translate(-50%,140px);
+    background:#1c1c1e;color:#fff;border-radius:14px;padding:12px 16px;display:flex;gap:16px;align-items:center;font-size:15px;
+    box-shadow:0 6px 24px rgba(0,0,0,.25);transition:transform .25s;max-width:calc(100% - 32px);z-index:5}
+  .toast.show{transform:translate(-50%,0)}
+  .toast button{border:none;background:none;color:#30d158;font-weight:600;font-size:15px;cursor:pointer}
+
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s;z-index:8}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;background:var(--card);border-radius:16px 16px 0 0;
+    padding:10px 16px calc(env(safe-area-inset-bottom) + 16px);transform:translateY(105%);transition:transform .28s ease;z-index:9;max-height:80vh;overflow-y:auto}
+  .sheet.show{transform:translateY(0)}
+  .grab{width:36px;height:5px;border-radius:3px;background:var(--sep);margin:0 auto 10px}
+  .sheet h3{margin:0 0 2px;font-size:17px;text-align:center}
+  .sheet p{margin:0 0 12px;font-size:13px;color:var(--sub);text-align:center}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .opt{border:none;background:var(--bg);color:var(--text);font-size:15px;padding:12px 10px;border-radius:12px;text-align:left;cursor:pointer}
+  .opt.on{background:var(--accent);color:#fff}
+  .cancel{width:100%;margin-top:12px;border:none;background:var(--bg);color:var(--text);font-size:17px;font-weight:600;padding:13px;border-radius:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Groceries</h1>
+    <div class="count" id="count"></div>
+  </header>
+
+  <div class="hint" id="installHint" hidden>
+    <b>Add this to your Home Screen</b> so it works without internet: tap the Share button, then <b>Add to Home Screen</b>, and use the Groceries icon from now on.
+  </div>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <div class="add-row">
+      <input id="itemInput" placeholder="Add an item…" enterkeyhint="done" aria-label="Item name">
+      <button id="addBtn" type="submit" disabled>Add</button>
+    </div>
+    <div class="chips" id="chips" aria-label="Category"></div>
+  </form>
+
+  <div id="sections"></div>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="grab"></div>
+  <h3 id="sheetTitle"></h3>
+  <p>Move to a category — it'll go there next time too.</p>
+  <div class="opts" id="opts"></div>
+  <button class="cancel" id="sheetCancel" type="button">Cancel</button>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span><button id="undoBtn" type="button">Undo</button></div>
+
+<script>
+(function(){
+  var CATS = [
+    {id:"produce",  name:"Produce",        icon:"🥬", words:["apple","banana","lettuce","tomato","onion","potato","carrot","berry","berries","grape","lemon","lime","orange","avocado","pepper","cucumber","spinach","kale","garlic","celery","broccoli","fruit","salad","mushroom","herb","cilantro","basil","zucchini","peach","pear","melon","corn","squash"]},
+    {id:"dairy",    name:"Dairy & Eggs",   icon:"🥛", words:["milk","cheese","yogurt","butter","egg","cream","sour cream","cottage","half and half","creamer"]},
+    {id:"fridge",   name:"Refrigerated",   icon:"❄️", words:["refrigerated","biscuit","crescent","pie crust","pizza dough","dough","cookie dough","cinnamon roll","grands","pillsbury","egg roll wrapper","wonton wrapper","tofu","hummus","guacamole","pesto","tortellini","ravioli","orange juice"]},
+    {id:"meat",     name:"Meat & Seafood", icon:"🥩", words:["chicken","beef","pork","steak","bacon","sausage","turkey","ham","fish","salmon","shrimp","tuna","ground","lamb","hot dog"]},
+    {id:"bakery",   name:"Bakery",         icon:"🥖", words:["bread","bagel","bun","roll","muffin","tortilla","croissant","cake","donut","pita"]},
+    {id:"pantry",   name:"Pantry",         icon:"🍝", words:["rice","pasta","oil","vinegar","sauce","cereal","oat","peanut butter","jam","jelly","honey","spice","salt","coffee","tea","noodle","ketchup","mustard","mayo","syrup","dressing","taco","salsa"]},
+    {id:"baking",   name:"Baking",         icon:"🧁", words:["flour","sugar","brown sugar","powdered sugar","baking soda","baking powder","yeast","vanilla","extract","cocoa","chocolate chips","cornstarch","shortening","cake mix","brownie mix","frosting","sprinkles","molasses","food coloring","cornmeal","pie filling"]},
+    {id:"canned",   name:"Canned Goods",   icon:"🥫", words:["canned","can of","cans of","soup","broth","stock","bouillon","beans","chickpea","tomato paste","diced tomatoes","crushed tomatoes","tomato sauce","chili","spam","evaporated milk","condensed milk","pumpkin puree","canned fruit"]},
+    {id:"frozen",   name:"Frozen",         icon:"🧊", words:["frozen","ice cream","pizza","waffle","ice"]},
+    {id:"snacks",   name:"Snacks",         icon:"🍿", words:["chips","cracker","cookie","popcorn","pretzel","nuts","candy","chocolate","granola","bar"]},
+    {id:"drinks",   name:"Beverages",      icon:"🧃", words:["water","soda","juice","beer","wine","seltzer","sparkling","kombucha","gatorade","pop"]},
+    {id:"household",name:"Household",      icon:"🧻", words:["paper towel","toilet paper","detergent","soap","trash bag","foil","wrap","sponge","cleaner","bleach","napkin","dish","laundry","batteries","bulb"]},
+    {id:"personal", name:"Personal Care",  icon:"🧴", words:["shampoo","conditioner","toothpaste","toothbrush","deodorant","lotion","razor","floss","tissue","vitamin","medicine"]},
+    {id:"other",    name:"Other",          icon:"🛒", words:[]}
+  ];
+  var catById = {}; CATS.forEach(function(c){ catById[c.id] = c; });
+
+  // ---- Saved on this phone ----
+  var LS = "groceries-offline-v1";
+  var state = {items:[], learned:{}};
+  try {
+    var saved = JSON.parse(localStorage.getItem(LS));
+    if (saved && Array.isArray(saved.items)) state.items = saved.items;
+    if (saved && saved.learned && typeof saved.learned === "object") state.learned = saved.learned;
+  } catch(e){}
+  function save(){ try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){} }
+
+  // Ask the phone to keep this data even when storage runs low.
+  if (navigator.storage && navigator.storage.persist) { navigator.storage.persist().catch(function(){}); }
+
+  function key(name){ return name.trim().toLowerCase().replace(/\s+/g, " "); }
+  function learn(name, cat){ state.learned[key(name)] = cat; }
+
+  var selectedCat = "other", catTouched = false;
+  var $ = function(id){ return document.getElementById(id); };
+  var input = $("itemInput"), addBtn = $("addBtn");
+
+  function guessCat(text){
+    var k = key(text);
+    if (!k) return "other";
+    if (state.learned[k] && catById[state.learned[k]]) return state.learned[k];
+    // Words that always mean canned goods, even with a food name ("canned corn", "chicken broth").
+    if (/\b(canned|cans? of|broth|stock|bouillon|soup)\b/.test(k)) return "canned";
+    var best = "other", bestLen = 0;
+    CATS.forEach(function(c){ c.words.forEach(function(w){
+      if (k.indexOf(w) !== -1 && w.length > bestLen){ best = c.id; bestLen = w.length; }
+    });});
+    return best;
+  }
+
+  function renderChips(){
+    var el = $("chips"); el.innerHTML = "";
+    CATS.forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip" + (c.id === selectedCat ? " on" : "");
+      b.textContent = c.icon + " " + c.name;
+      b.onclick = function(){ selectedCat = c.id; catTouched = true; renderChips(); input.focus(); };
+      el.appendChild(b);
+      if (c.id === selectedCat) setTimeout(function(){ b.scrollIntoView({inline:"center", block:"nearest", behavior:"smooth"}); }, 0);
+    });
+  }
+
+  function render(){
+    var box = $("sections"); box.innerHTML = "";
+    var n = state.items.length;
+    $("count").textContent = n ? n + (n === 1 ? " item" : " items") : "";
+    if (!n){
+      box.innerHTML = '<div class="empty"><div>🛒</div>Your list is empty.<br>Add something above.</div>';
+      return;
+    }
+    CATS.forEach(function(c){
+      var items = state.items.filter(function(i){ return (catById[i.cat] ? i.cat : "other") === c.id; });
+      if (!items.length) return;
+      var sec = document.createElement("div"); sec.className = "section";
+      sec.innerHTML = "<h2><span>" + c.icon + "</span><span>" + c.name + "</span></h2>";
+      var list = document.createElement("div"); list.className = "list";
+      items.forEach(function(it){
+        var row = document.createElement("div"); row.className = "item";
+        var chk = document.createElement("button"); chk.className = "check"; chk.setAttribute("aria-label", "Check off " + it.name);
+        chk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+        chk.onclick = function(){ checkOff(it.id, row); };
+        var name = document.createElement("div"); name.className = "name"; name.textContent = it.name;
+        name.setAttribute("role", "button"); name.tabIndex = 0;
+        name.onclick = function(){ openSheet(it); };
+        var del = document.createElement("button"); del.className = "del"; del.innerHTML = "&times;"; del.setAttribute("aria-label", "Remove " + it.name);
+        del.onclick = function(){ removeItem(it.id, row, "Removed"); };
+        row.append(chk, name, del); list.appendChild(row);
+      });
+      sec.appendChild(list); box.appendChild(sec);
+    });
+  }
+
+  // ---- Change category ----
+  var sheetItem = null;
+  function openSheet(it){
+    sheetItem = it;
+    $("sheetTitle").textContent = it.name;
+    var opts = $("opts"); opts.innerHTML = "";
+    CATS.forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "opt" + (c.id === it.cat ? " on" : "");
+      b.textContent = c.icon + "  " + c.name;
+      b.onclick = function(){ moveItem(c.id); };
+      opts.appendChild(b);
+    });
+    $("backdrop").classList.add("show"); $("sheet").classList.add("show");
+  }
+  function closeSheet(){ sheetItem = null; $("backdrop").classList.remove("show"); $("sheet").classList.remove("show"); }
+  function moveItem(cat){
+    var it = sheetItem; closeSheet();
+    if (!it || it.cat === cat) return;
+    it.cat = cat; learn(it.name, cat); save(); render();
+    showToast("Moved " + it.name + " to " + catById[cat].name, true);
+  }
+  $("backdrop").onclick = closeSheet;
+  $("sheetCancel").onclick = closeSheet;
+
+  // ---- Check off / remove / undo ----
+  var lastRemoved = null, toastTimer = null;
+  function showToast(text, noUndo){
+    $("toastText").textContent = text;
+    $("undoBtn").style.display = noUndo ? "none" : "";
+    if (noUndo) lastRemoved = null;
+    $("toast").classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ $("toast").classList.remove("show"); lastRemoved = null; }, 4000);
+  }
+
+  function checkOff(id, row){
+    if (row.classList.contains("done")) return;
+    row.classList.add("done");
+    if (navigator.vibrate) navigator.vibrate(10);
+    setTimeout(function(){ removeItem(id, row, "Checked off"); }, 450);
+  }
+
+  function removeItem(id, row, verb){
+    var idx = state.items.findIndex(function(i){ return i.id === id; });
+    if (idx < 0) return;
+    var it = state.items[idx];
+    state.items.splice(idx, 1); save();
+    lastRemoved = {item: it, index: idx};
+    row.classList.add("leaving");
+    setTimeout(render, 400);
+    showToast(verb + " " + it.name);
+  }
+
+  $("undoBtn").onclick = function(){
+    if (!lastRemoved) return;
+    var r = lastRemoved; lastRemoved = null;
+    if (state.items.indexOf(r.item) === -1) state.items.splice(Math.min(r.index, state.items.length), 0, r.item);
+    save();
+    $("toast").classList.remove("show");
+    setTimeout(render, 420);
+  };
+
+  // ---- Add ----
+  input.addEventListener("input", function(){
+    addBtn.disabled = !input.value.trim();
+    if (!catTouched){
+      var g = guessCat(input.value);
+      if (g !== selectedCat){ selectedCat = g; renderChips(); }
+    }
+  });
+
+  $("addForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = input.value.trim(); if (!name) return;
+    if (catTouched) learn(name, selectedCat);
+    var dup = state.items.some(function(i){ return i.name.toLowerCase() === name.toLowerCase(); });
+    if (!dup){
+      state.items.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, cat: selectedCat});
+    }
+    save(); render();
+    input.value = ""; addBtn.disabled = true; catTouched = false;
+    selectedCat = "other"; renderChips(); input.focus();
+  });
+
+  // Another tab or the Home Screen app changed the list: show the latest.
+  window.addEventListener("storage", function(e){
+    if (e.key !== LS) return;
+    try { var s = JSON.parse(e.newValue); if (s && Array.isArray(s.items)) { state.items = s.items; state.learned = s.learned || {}; render(); } } catch(err){}
+  });
+
+  // Show the "Add to Home Screen" tip only in regular Safari.
+  var standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) $("installHint").hidden = false;
+
+  // Save the app on the phone for offline use.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
+
+  renderChips(); render();
+})();
+</script>
+</body>
+</html>
